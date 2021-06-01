@@ -28,3 +28,20 @@ initials :: String -> String -> String
 initials firstname lastname = [f] ++ ". " ++ [l] ++ "."  
     where (f:_) = firstname  
           (l:_) = lastname 
+
+-- let binding; example of the surface area of a cylinder
+cylinder :: (RealFloat a) => a -> a -> a 
+cylinder r h =
+    let sideArea = 2 * pi * r * h 
+        topArea = pi * r ^2
+    in sideArea + 2 * topArea 
+
+-- let binding; example for list comprehension, the let bind is added as a predicate
+calcBmis :: (RealFloat a) => [(a, a)] -> [a]  
+calcBmis xs = [bmi | (w, h) <- xs, let bmi = w / h ^ 2]  
+
+-- Case expressions; example for a custom head function
+head' :: [a] -> a  
+head' xs = case xs of [] -> error "No head for empty lists!"  
+                      (x:_) -> x  
+
