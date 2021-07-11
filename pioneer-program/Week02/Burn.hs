@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE OverloadedStrings   #-} --extension to produce a byte string
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -32,7 +32,8 @@ import           Text.Printf         (printf)
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
-mkValidator _ _ _ = traceError "BURNT!"
+mkValidator _ _ _ = traceError "BURNT!" -- this approach shows why the validation failed; takes a strings
+-- mkValidator _ _ _ = error ()     
 
 validator :: Validator
 validator = mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
