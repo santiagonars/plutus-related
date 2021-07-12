@@ -32,11 +32,12 @@ import           Text.Printf          (printf)
 
 newtype MySillyRedeemer = MySillyRedeemer Integer
 
-PlutusTx.unstableMakeIsData ''MySillyRedeemer
+-- At compile time, it writes an instance of IsData for MySillyRedeemer type
+PlutusTx.unstableMakeIsData ''MySillyRedeemer -- a template Haskell function; syntax to provide a type is to use 2 single quotes in front of the type name
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: () -> MySillyRedeemer -> ScriptContext -> Bool
-mkValidator _ (MySillyRedeemer r) _ = traceIfFalse "wrong redeemer" $ r == 42
+mkValidator _ (MySillyRedeemer r) _ = traceIfFalse "wrong redeemer" $ r == 42 -- MySillyRedeemer r was updated for pattern match
 
 data Typed
 instance Scripts.ValidatorTypes Typed where

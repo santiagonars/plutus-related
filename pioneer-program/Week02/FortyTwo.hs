@@ -33,7 +33,7 @@ import           Text.Printf         (printf)
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
 mkValidator _ r _
-    | r == I 42 = ()
+    | r == I 42 = ()                -- passes of the redeemer is I 42
     | otherwise = traceError "wrong redeemer"
 
 validator :: Validator
@@ -47,7 +47,7 @@ scrAddress = scriptAddress validator
 
 type GiftSchema =
             Endpoint "give" Integer
-        .\/ Endpoint "grab" Integer
+        .\/ Endpoint "grab" Integer -- need to provide an integer argument to this endpoint
 
 give :: AsContractError e => Integer -> Contract w s e ()
 give amount = do
@@ -72,7 +72,7 @@ endpoints :: Contract () GiftSchema Text ()
 endpoints = (give' `select` grab') >> endpoints
   where
     give' = endpoint @"give" >>= give
-    grab' = endpoint @"grab" >>= grab
+    grab' = endpoint @"grab" >>= grab -- needed to add the equal sign which means to pass the argument to grab
 
 mkSchemaDefinitions ''GiftSchema
 
