@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DeriveAnyClass      #-} -- additional GHC extension
+{-# LANGUAGE DeriveGeneric       #-} -- additional GHC extension
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -37,23 +37,23 @@ import           Text.Printf          (printf)
 data VestingDatum = VestingDatum
     { beneficiary :: PubKeyHash
     , deadline    :: POSIXTime
-    } deriving Show
+    } deriving Show  -- Show might be useful for debugging
 
 PlutusTx.unstableMakeIsData ''VestingDatum
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: VestingDatum -> () -> ScriptContext -> Bool
-mkValidator dat () ctx = traceIfFalse "beneficiary's signature missing" signedByBeneficiary &&
-                         traceIfFalse "deadline not reached" deadlineReached
+mkValidator :: VestingDatum -> () -> ScriptContext -> Bool  -- need to check 2 conditions; must define these
+mkValidator dat () ctx = traceIfFalse "beneficiary's signature missing" signedByBeneficiary && -- signed by the beneficiary
+                         traceIfFalse "deadline not reached" deadlineReached  -- current time is after the deadline  
   where
     info :: TxInfo
-    info = scriptContextTxInfo ctx
+    info = scriptContextTxInfo ctx -- to get the TxInfo from the script, must use scriptContextTxInfo
 
     signedByBeneficiary :: Bool
-    signedByBeneficiary = txSignedBy info $ beneficiary dat
+    signedByBeneficiary = txSignedBy info $ beneficiary dat -- takes the TxInfo and a PubKeyHash and tells whether it has been signed
 
     deadlineReached :: Bool
-    deadlineReached = contains (from $ deadline dat) $ txInfoValidRange info
+    deadlineReached = contains (from $ deadline dat) $ txInfoValidRange info -- check that the interval of type POSIXTimeRange is after deadline
 
 data Vesting
 instance Scripts.ValidatorTypes Vesting where
@@ -84,15 +84,15 @@ data GiveParams = GiveParams
 
 type VestingSchema =
             Endpoint "give" GiveParams
-        .\/ Endpoint "grab" ()
+        .\/ Endpoint "grab" () -- doesn't need any parameters because the beneficiary will look for utxos at the vesting address and check if he/she is the beneficiary
 
 give :: AsContractError e => GiveParams -> Contract w s e ()
 give gp = do
     let dat = VestingDatum
-                { beneficiary = gpBeneficiary gp
-                , deadline    = gpDeadline gp
+                { beneficiary = gpBeneficiary gp -- from the GiveParams
+                , deadline    = gpDeadline gp -- from the GiveParams
                 }
-        tx  = mustPayToTheScript dat $ Ada.lovelaceValueOf $ gpAmount gp
+        tx  = mustPayToTheScript dat $ Ada.lovelaceValueOf $ gpAmount gp -- need a constraint to create a transaction with the output at the script address; must provide Datum defined and value  
     ledgerTx <- submitTxConstraints typedValidator tx
     void $ awaitTxConfirmed $ txId ledgerTx
     logInfo @String $ printf "made a gift of %d lovelace to %s with deadline %s"
@@ -103,29 +103,29 @@ give gp = do
 grab :: forall w s e. AsContractError e => Contract w s e ()
 grab = do
     now   <- currentTime
-    pkh   <- pubKeyHash <$> ownPubKey
-    utxos <- Map.filter (isSuitable pkh now) <$> utxoAt scrAddress
+    pkh   <- pubKeyHash <$> ownPubKey -- lookup up own's public key and compute it's hash
+    utxos <- Map.filter (isSuitable pkh now) <$> utxoAt scrAddress -- look at all utxos at the script address & filter for only utxos with match beneficiary and deadline has been reached
     if Map.null utxos
         then logInfo @String $ "no gifts available"
-        else do
+        else do -- if there is at least one utxo, then contruct a transaction that consumes them all as inputs
             let orefs   = fst <$> Map.toList utxos
-                lookups = Constraints.unspentOutputs utxos  <>
-                          Constraints.otherScript validator
+                lookups = Constraints.unspentOutputs utxos  <>  -- need to provide the UTXOs
+                          Constraints.otherScript validator     -- need to provide the validator script
                 tx :: TxConstraints Void Void
-                tx      = mconcat [mustSpendScriptOutput oref $ Redeemer $ PlutusTx.toData () | oref <- orefs] <>
-                          mustValidateIn (from now)
+                tx      = mconcat [mustSpendScriptOutput oref $ Redeemer $ PlutusTx.toData () | oref <- orefs] <>  -- goers through list of utxos to spend
+                          mustValidateIn (from now) -- interval provided must be after the deadline; 
             ledgerTx <- submitTxConstraintsWith @Void lookups tx
             void $ awaitTxConfirmed $ txId ledgerTx
             logInfo @String $ "collected gifts"
   where
     isSuitable :: PubKeyHash -> POSIXTime -> TxOutTx -> Bool
-    isSuitable pkh now o = case txOutDatumHash $ txOutTxOut o of
+    isSuitable pkh now o = case txOutDatumHash $ txOutTxOut o of  -- first need to check the DatumHash and if found it's the h
         Nothing -> False
-        Just h  -> case Map.lookup h $ txData $ txOutTxTx o of
+        Just h  -> case Map.lookup h $ txData $ txOutTxTx o of  -- try look up the corresponding Datum; we can find it because it was optionally added to the script in the give function
             Nothing        -> False
-            Just (Datum e) -> case PlutusTx.fromData e of
+            Just (Datum e) -> case PlutusTx.fromData e of -- must deserialize the Datum; is is of the Data type but we need it in Vesting type
                 Nothing -> False
-                Just d  -> beneficiary d == pkh && deadline d <= now
+                Just d  -> beneficiary d == pkh && deadline d <= now -- check the benefiary of the datum is myself and that the current time has passed the deadline
 
 endpoints :: Contract () VestingSchema Text ()
 endpoints = (give' `select` grab') >> endpoints
