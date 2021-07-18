@@ -123,7 +123,7 @@ grab = do
         Nothing -> False
         Just h  -> case Map.lookup h $ txData $ txOutTxTx o of  -- try look up the corresponding Datum; we can find it because it was optionally added to the script in the give function
             Nothing        -> False
-            Just (Datum e) -> case PlutusTx.fromData e of -- must deserialize the Datum; is is of the Data type but we need it in Vesting type
+            Just (Datum e) -> case PlutusTx.fromData e of -- must deserialize the Datum; it is of the Data type but we need it in Vesting type
                 Nothing -> False
                 Just d  -> beneficiary d == pkh && deadline d <= now -- check the benefiary of the datum is myself and that the current time has passed the deadline
 
