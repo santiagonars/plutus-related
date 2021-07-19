@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-} -- extension enables multi type parameter for a class; used to make VestingParam an instance of the Lift class
 {-# LANGUAGE NoImplicitPrelude     #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -40,10 +40,10 @@ data VestingParam = VestingParam
     , deadline    :: POSIXTime
     } deriving Show
 
-PlutusTx.makeLift ''VestingParam
+PlutusTx.makeLift ''VestingParam  -- make VestingParam an instance of the Lift type class
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: VestingParam -> () -> () -> ScriptContext -> Bool
+mkValidator :: VestingParam -> () -> () -> ScriptContext -> Bool -- this gets an addition parameter p, the parameter of the script
 mkValidator p () () ctx = traceIfFalse "beneficiary's signature missing" signedByBeneficiary &&
                           traceIfFalse "deadline not reached" deadlineReached
   where
@@ -61,21 +61,21 @@ instance Scripts.ValidatorTypes Vesting where
     type instance DatumType Vesting = ()
     type instance RedeemerType Vesting = ()
 
-typedValidator :: VestingParam -> Scripts.TypedValidator Vesting
-typedValidator p = Scripts.mkTypedValidator @Vesting
-    ($$(PlutusTx.compile [|| mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode p)
+typedValidator :: VestingParam -> Scripts.TypedValidator Vesting -- no longer a constant so it now takes a parameter p
+typedValidator p = Scripts.mkTypedValidator @Vesting  -- applyCode allows a Plutus Core function to be applied with a Plutus Core value
+    ($$(PlutusTx.compile [|| mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode p) -- liftCode allows p to compile at runtime to Plutus Core
     $$(PlutusTx.compile [|| wrap ||])
   where
     wrap = Scripts.wrapValidator @() @()
 
 validator :: VestingParam -> Validator
-validator = Scripts.validatorScript . typedValidator
+validator = Scripts.validatorScript . typedValidator --applied with function composition to account for the paramater
 
 valHash :: VestingParam -> Ledger.ValidatorHash
-valHash = Scripts.validatorHash . typedValidator
+valHash = Scripts.validatorHash . typedValidator --applied with function composition to account for the paramater
 
 scrAddress :: VestingParam -> Ledger.Address
-scrAddress = scriptAddress . validator
+scrAddress = scriptAddress . validator --applied with function composition to account for the paramater
 
 data GiveParams = GiveParams
     { gpBeneficiary :: !PubKeyHash
@@ -112,13 +112,13 @@ grab d = do
                         { beneficiary = pkh
                         , deadline    = d
                         }
-            utxos <- utxoAt $ scrAddress p
+            utxos <- utxoAt $ scrAddress p -- get all utxos stting at this address with matching beneficiary and deadline
             if Map.null utxos
                 then logInfo @String $ "no gifts available"
                 else do
                     let orefs   = fst <$> Map.toList utxos
-                        lookups = Constraints.unspentOutputs utxos      <>
-                                  Constraints.otherScript (validator p)
+                        lookups = Constraints.unspentOutputs utxos      <>  -- define the lookups that define these utxos
+                                  Constraints.otherScript (validator p)     -- define the lookups that define the script
                         tx :: TxConstraints Void Void
                         tx      = mconcat [mustSpendScriptOutput oref $ Redeemer $ PlutusTx.toData () | oref <- orefs] <>
                                   mustValidateIn (from now)
