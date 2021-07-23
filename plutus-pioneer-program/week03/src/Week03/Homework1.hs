@@ -47,12 +47,22 @@ PlutusTx.unstableMakeIsData ''VestingDatum
 -- or if beneficiary2 has signed the transaction and the deadline has passed.
 mkValidator :: VestingDatum -> () -> ScriptContext -> Bool
 mkValidator dat () ctx
-    | (txSignedBy info $ beneficiary1 dat) && (contains (to $ deadline dat) $ txInfoValidRange info) = True
-    | (txSignedBy info $ beneficiary2 dat) && (contains (from $ deadline dat) $ txInfoValidRange info) = True
-    | otherwise = traceError "Either dealine has passed for beneficiary 1, it has not been met for beneficiary 2, or invalid beneficiary"
+    | (txSignedBy info $ beneficiary1 dat) && (beforeDeadline) = True
+    | (txSignedBy info $ beneficiary2 dat) && (afterDeadline) = True
+    | otherwise = traceError "beneficiary 1 can claim only up to deadline, beneficiary 2 can only reclaim after deadline, or invalid beneficiary"
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
+
+    beforeDeadline :: Bool
+    beforeDeadline = contains (to $ deadline dat) $ txInfoValidRange info -- doesnt work on exact deadline slot; before yes
+    -- beforeDeadline = after (deadline dat) $ txInfoValidRange info
+    -- upToDeadline = contains (to $ (deadline dat + 1000)) $ txInfoValidRange info
+
+    afterDeadline :: Bool
+    afterDeadline = contains (from $ deadline dat) $ txInfoValidRange info -- works on exact slot deadline and after; not with wallet 2?
+    -- afterDeadline = before (deadline dat) $ txInfoValidRange info -- works in wallet 1; not on wallet 2
+    -- (from $ (1 + deadline dat))
 
 data Vesting
 instance Scripts.ValidatorTypes Vesting where
