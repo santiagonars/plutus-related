@@ -112,7 +112,7 @@ grab d = do
                         { beneficiary = pkh
                         , deadline    = d
                         }
-            utxos <- utxoAt $ scrAddress p -- get all utxos stting at this address with matching beneficiary and deadline
+            utxos <- utxoAt $ scrAddress p -- get all utxos stting at this address
             if Map.null utxos
                 then logInfo @String $ "no gifts available"
                 else do
