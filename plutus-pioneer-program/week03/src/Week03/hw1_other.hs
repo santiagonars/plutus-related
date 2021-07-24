@@ -58,7 +58,7 @@ mkValidator dat () ctx
     add' x y = x + y
 
     beforeDeadline :: Bool
-    beforeDeadline = contains (to $ (add' 1000 deadline dat)) $ txInfoValidRange info
+    beforeDeadline = contains (to $ add' 1001 $ deadline dat) $ txInfoValidRange info
 
     afterDeadline :: Bool
     afterDeadline = before (deadline dat) $ txInfoValidRange info
