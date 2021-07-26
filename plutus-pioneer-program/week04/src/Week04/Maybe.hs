@@ -13,11 +13,11 @@ foo x y z = case readMaybe x of
             Just m  -> Just (k + l + m)
 
 bindMaybe :: Maybe a -> (a -> Maybe b) -> Maybe b
-bindMaybe Nothing  _ = Nothing
-bindMaybe (Just x) f = f x
+bindMaybe Nothing  _ = Nothing -- similar to exceptions
+bindMaybe (Just x) f = f x -- applies function to x is Maybe a is not nothing
 
 foo' :: String -> String -> String -> Maybe Int
-foo' x y z = readMaybe x `bindMaybe` \k ->
+foo' x y z = readMaybe x `bindMaybe` \k ->  -- the \k is a lambda function that saves the result of x in k 
              readMaybe y `bindMaybe` \l ->
              readMaybe z `bindMaybe` \m ->
              Just (k + l + m)
