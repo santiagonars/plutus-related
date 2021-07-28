@@ -9,6 +9,9 @@ compareWithHundred' = compare 100
 isUpperAlphanum :: Char -> Bool  
 isUpperAlphanum = (`elem` ['A'..'Z']) 
 
--- Instead of doing (-4)
+-- ONLY EXCEPTION: Instead of doing (-4)
 subFour :: Integer -> Integer 
-subFour = (+4)
+subFour = (subtract 4)  
+
+app :: (a -> b) -> a -> b -- use running this example which return 2:   app (\x -> x+1) 1
+app f x = f x
