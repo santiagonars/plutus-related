@@ -17,7 +17,7 @@ foo :: Writer Int -> Writer Int -> Writer Int -> Writer Int
 foo (Writer k xs) (Writer l ys) (Writer m zs) =
   let
     s = k + l + m
-    Writer _ us = tell ["sum: " ++ show s] -- Write () us
+    Writer _ us = tell ["sum: " ++ show s] -- same as 'Write () us' where us is the log message
   in
     Writer s $ xs ++ ys ++ zs ++ us
 
@@ -25,7 +25,7 @@ foo (Writer k xs) (Writer l ys) (Writer m zs) =
 bindWriter :: Writer a -> (a -> Writer b) -> Writer b
 bindWriter (Writer a xs) f =
   let
-    Writer b ys = f a
+    Writer b ys = f a -- example: Writer b ys = (\k -> Writer 2 ["number: 2"]) 1 = Writer 2 ["number: 2"]
   in
     Writer b $ xs ++ ys -- binds log messages from a and b
 
