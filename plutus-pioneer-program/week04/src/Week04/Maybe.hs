@@ -22,5 +22,6 @@ foo' x y z = readMaybe x `bindMaybe` \k ->  -- the \k is a lambda function that 
              readMaybe z `bindMaybe` \m ->
              Just (k + l + m)
 
+-- Monad implementation
 foo'' :: String -> String -> String -> Maybe Int
 foo'' x y z = threeInts (readMaybe x) (readMaybe y) (readMaybe z)
