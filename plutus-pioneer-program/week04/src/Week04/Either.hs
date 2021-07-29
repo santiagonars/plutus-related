@@ -27,5 +27,6 @@ foo' x y z = readEither x `bindEither` \k ->
              readEither z `bindEither` \m ->
              Right (k + l + m)
 
+-- Monad implementation
 foo'' :: String -> String -> String -> Either String Int
 foo'' x y z = threeInts (readEither x) (readEither y) (readEither z)
