@@ -1,6 +1,6 @@
 module Week04.Writer where
 
-import Control.Monad
+import Control.Monad -- for helper function liftM
 import Week04.Monad
 -- Thesis: The idea of creating  computations that can also produce lock output
 data Writer a = Writer a [String] -- constructor takes 2 arguments; Writer a & a list of lock messages
@@ -38,19 +38,29 @@ foo' x y z = x `bindWriter` \k ->
              in tell ["sum: " ++ show s] `bindWriter` \_ ->
                 Writer s []
 
+-- Monad implementation using 'do' 
 foo'' :: Writer Int -> Writer Int -> Writer Int -> Writer Int
 foo'' x y z = do
     s <- threeInts x y z
     tell ["sum: " ++ show s]
     return s
 
-instance Functor Writer where
-    fmap = liftM
+-- Monad implementation (alternative approach) using explicit binding
+foo''' :: Writer Int -> Writer Int -> Writer Int -> Writer Int
+foo''' x y z = threeInts x y z           >>= \s ->
+               tell ["sum: " ++ show s]  >>
+               return s
 
+-- Standard Functor instance for the Monad Writer type
+instance Functor Writer where
+    fmap = liftM -- makes use of return and bind to implement fmap; liftM is a helper function from the prelude from Control.Monad
+
+-- Standard Applicative instance for the Monad Writer type
 instance Applicative Writer where
     pure = return
     (<*>) = ap
 
+-- A Monad instance for the Writer type
 instance Monad Writer where
     return a = Writer a []
     (>>=) = bindWriter
