@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
-
+-- Idea here is that minting and burning can only happen if the trasaction that tries to do it is signed by a specifc signature (the owner of a specific PubKeyHash)
 module Week05.Signed where
 
 import           Control.Monad          hiding (fmap)
@@ -32,18 +32,18 @@ import           Prelude                (IO, Show (..), String)
 import           Text.Printf            (printf)
 import           Wallet.Emulator.Wallet
 
-{-# INLINABLE mkPolicy #-}
+{-# INLINABLE mkPolicy #-} -- need a parametized minting policy where the parameter is the PubKeyHash to check for
 mkPolicy :: PubKeyHash -> () -> ScriptContext -> Bool
-mkPolicy pkh () ctx = txSignedBy (scriptContextTxInfo ctx) pkh
+mkPolicy pkh () ctx = txSignedBy (scriptContextTxInfo ctx) pkh -- txSignedBy takes the TxInfo of the Context and a PubKeyHash
 
-policy :: PubKeyHash -> Scripts.MintingPolicy
+policy :: PubKeyHash -> Scripts.MintingPolicy  -- policy is not longer a constant, it is now a function that takes a parameter
 policy pkh = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy . mkPolicy ||])
+    $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy . mkPolicy ||]) -- need to apply the lifted parameter, so it is composed (the dot .) with mkPolicy
     `PlutusTx.applyCode`
     (PlutusTx.liftCode pkh)
 
-curSymbol :: PubKeyHash -> CurrencySymbol
-curSymbol = scriptCurrencySymbol . policy
+curSymbol :: PubKeyHash -> CurrencySymbol  -- curSymbol is now a function that takes an argument
+curSymbol = scriptCurrencySymbol . policy  -- Need to compose . here to account for the parameter
 
 data MintParams = MintParams
     { mpTokenName :: !TokenName
@@ -54,7 +54,7 @@ type SignedSchema = Endpoint "mint" MintParams
 
 mint :: MintParams -> Contract w SignedSchema Text ()
 mint mp = do
-    pkh <- pubKeyHash <$> Contract.ownPubKey
+    pkh <- pubKeyHash <$> Contract.ownPubKey  -- Use fmap to apply pubKeyHash to our own PubKey
     let val     = Value.singleton (curSymbol pkh) (mpTokenName mp) (mpAmount mp)
         lookups = Constraints.mintingPolicy $ policy pkh
         tx      = Constraints.mustMintValue val
@@ -71,6 +71,8 @@ mkSchemaDefinitions ''SignedSchema
 
 mkKnownCurrencies []
 
+-- If the parameter is different, the resulting script will be different, so the hash of the resulting script will be different, which is the currency symbol
+-- Therefore a wallet will oinly have it's own signature to sign transaction
 test :: IO ()
 test = runEmulatorTraceIO $ do
     let tn = "ABC"
