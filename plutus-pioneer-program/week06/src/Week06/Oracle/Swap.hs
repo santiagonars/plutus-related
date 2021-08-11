@@ -175,19 +175,19 @@ useSwap oracle = do
             case find (f amt x) swaps of -- find tries to find a swap that user can afford; find is helper function part of the haskell prelude (Data.Lists)
                 Nothing                -> logInfo @String "no suitable swap found"
                 Just (oref', o', pkh') -> do  -- if a swap was found that can afforded, the first one is used (Realistically would be to specify the amount to swap)
-                    let v       = txOutValue (txOutTxOut o) <> lovelaceValueOf (oFee oracle)
-                        p       = assetClassValue (oAsset oracle) $ price (lovelaces $ txOutValue $ txOutTxOut o') x
-                        lookups = Constraints.otherScript (swapValidator oracle)                     <>
-                                  Constraints.otherScript (oracleValidator oracle)                   <>
-                                  Constraints.unspentOutputs (Map.fromList [(oref, o), (oref', o')])
-                        tx      = Constraints.mustSpendScriptOutput oref  (Redeemer $ PlutusTx.toBuiltinData Use) <>
-                                  Constraints.mustSpendScriptOutput oref' (Redeemer $ PlutusTx.toBuiltinData ())  <>
-                                  Constraints.mustPayToOtherScript
-                                    (validatorHash $ oracleValidator oracle)
-                                    (Datum $ PlutusTx.toBuiltinData x)
-                                    v                                                                             <>
-                                  Constraints.mustPayToPubKey pkh' p
-                    ledgerTx <- submitTxConstraintsWith @Swapping lookups tx
+                    let v       = txOutValue (txOutTxOut o) <> lovelaceValueOf (oFee oracle) -- Need to add fees to the value in the oracle
+                        p       = assetClassValue (oAsset oracle) $ price (lovelaces $ txOutValue $ txOutTxOut o') x -- p is the price to pay in USD token
+                        lookups = Constraints.otherScript (swapValidator oracle)                     <> -- must provide the validator of the swap contract
+                                  Constraints.otherScript (oracleValidator oracle)                   <> -- must provide the validator of the oracle contract
+                                  Constraints.unspentOutputs (Map.fromList [(oref, o), (oref', o')])  -- must provide UTXOs to consume, for the oracle and the swap 
+                        tx      = Constraints.mustSpendScriptOutput oref  (Redeemer $ PlutusTx.toBuiltinData Use) <> -- must use the oracle UTXO as input; use the Use Redeemer
+                                  Constraints.mustSpendScriptOutput oref' (Redeemer $ PlutusTx.toBuiltinData ())  <> -- consume the swap output as an input
+                                  Constraints.mustPayToOtherScript             -- must pay to the oracle the value that was compute before for v
+                                    (validatorHash $ oracleValidator oracle)   -- provide the oracle hash
+                                    (Datum $ PlutusTx.toBuiltinData x)         -- use the existing Datum; must not change the exchange rate when usign it
+                                    v                                   <>     -- this was the exiting value in the oracle and the fee that needs to be paid
+                                  Constraints.mustPayToPubKey pkh' p           -- must pay the seller of the lovelace
+                    ledgerTx <- submitTxConstraintsWith @Swapping lookups tx   -- submit it
                     awaitTxConfirmed $ txId ledgerTx
                     logInfo @String $ "made swap with price " ++ show (Value.flattenValue p)
   where
@@ -195,21 +195,23 @@ useSwap oracle = do
     getPrice x o = price (lovelaces $ txOutValue $ txOutTxOut o) x
 
     f :: Integer -> Integer -> (TxOutRef, TxOutTx, PubKeyHash) -> Bool -- returns whether the swap is suitable or not
-    f amt x (_, o, _) = getPrice x o <= amt -- check price is lower than tokens owned
+    f amt x (_, o, _) = getPrice x o <= amt -- check price is lower than tokens owned; amt is the amount of USD tokens available in user's wallet to pay for the swap
 
-type SwapSchema =
-            Endpoint "offer"    Integer
-        .\/ Endpoint "retrieve" ()
-        .\/ Endpoint "use"      ()
-        .\/ Endpoint "funds"    ()
+type SwapSchema =         -- schema defined with 4 endpoints
+            Endpoint "offer"    Integer   -- to offer a swap with an amount of ADA in lovelaces
+        .\/ Endpoint "retrieve" ()        -- to retrieve all swaps
+        .\/ Endpoint "use"      ()        -- to do a swap 
+        .\/ Endpoint "funds"    ()        -- provides currently available funds
 
+-- `select` operator  
+-- contract when there are several endpoints, it waits until one is picked and executes accordingly
 swap :: Oracle -> Contract (Last Value) SwapSchema Text ()
-swap oracle = (offer `select` retrieve `select` use `select` funds) >> swap oracle
+swap oracle = (offer `select` retrieve `select` use `select` funds) >> swap oracle  -- after an endpoint is selected and executed, in a sequence it gets recursively called again
   where
     offer :: Contract (Last Value) SwapSchema Text ()
     offer = h $ do
-        amt <- endpoint @"offer"
-        offerSwap oracle amt
+        amt <- endpoint @"offer"  -- if this get's called, it pauses here until an integer amount is provided
+        offerSwap oracle amt  -- call the offerSwap oracle amount contract that was defined
 
     retrieve :: Contract (Last Value) SwapSchema Text ()
     retrieve = h $ do
@@ -223,9 +225,9 @@ swap oracle = (offer `select` retrieve `select` use `select` funds) >> swap orac
 
     funds :: Contract (Last Value) SwapSchema Text ()
     funds = h $ do
-        endpoint @"funds"
-        v <- ownFunds
-        tell $ Last $ Just v
+        endpoint @"funds" -- gets blocked until funds endpointis invoked
+        v <- ownFunds  -- ownFunds module provides the funds owned
+        tell $ Last $ Just v  -- tell allows passing information outside a contract to the outside world
 
-    h :: Contract (Last Value) SwapSchema Text () -> Contract (Last Value) SwapSchema Text ()
+    h :: Contract (Last Value) SwapSchema Text () -> Contract (Last Value) SwapSchema Text () -- an error handler
     h = handleError logError

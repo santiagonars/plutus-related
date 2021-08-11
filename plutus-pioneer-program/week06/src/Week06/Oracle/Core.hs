@@ -48,7 +48,7 @@ data Oracle = Oracle
     { oSymbol   :: !CurrencySymbol   -- Currency symbol of the NFT; The NFT to uniquely identify the oracle
     , oOperator :: !PubKeyHash       -- The onwer (operator) of the oracle that caa make updates
     , oFee      :: !Integer          -- The fees in lovelaves that are due each time someone uses the oracle
-    , oAsset    :: !AssetClass       -- Identifies the target of the oracle (Could be asset class to represet some USD token)
+    , oAsset    :: !AssetClass       -- Identifies the target of the oracle (Could be asset class to represent some USD token)
     } deriving (Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
 
 PlutusTx.makeLift ''Oracle  -- type class for the Oracle to be serializable and liftable
@@ -198,7 +198,7 @@ runOracle :: OracleParams -> Contract (Last Oracle) OracleSchema Text ()
 runOracle op = do
     oracle <- startOracle op   -- startOracle mints ther NFT and returns the oracle parameters
     tell $ Last $ Just oracle  -- tell is used to write the oracle value to allow passing information outside a contract to the outside world; Last provides the last oracle values
-    go oracle   -- go loops forever; 
+    go oracle   -- go loops forever 
   where
     go :: Oracle -> Contract (Last Oracle) OracleSchema Text a
     go oracle = do
