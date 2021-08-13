@@ -24,18 +24,18 @@ import Text.Read                               (readMaybe)
 
 import Week06.Oracle.PAB                       (OracleContracts)
 
-main :: IO ()
-main = do
-    [i :: Int] <- map read <$> getArgs
-    uuid       <- read <$> readFile ('W' : show i ++ ".cid")
+main :: IO () -- The idea here is to offer a console interface for the user to be able to make offers, retrieve, use, or check funds
+main = do  
+    [i :: Int] <- map read <$> getArgs  -- get a command line parameter for the wallet number; this is provided to run this client for different wallets
+    uuid       <- read <$> readFile ('W' : show i ++ ".cid") -- read the correct uuid from the file
     hSetBuffering stdout NoBuffering
     putStrLn $ "swap contract instance id for Wallet " ++ show i ++ ": " ++ show uuid
     go uuid
   where
     go :: UUID -> IO a
     go uuid = do
-        cmd <- readCommand
-        case cmd of
+        cmd <- readCommand -- pass the command that is entered from the console
+        case cmd of        -- call the appropiate endpoint; endpoint call for each selection is defined
             Offer amt -> offer uuid amt
             Retrieve  -> retrieve uuid
             Use       -> use uuid
@@ -51,10 +51,10 @@ main = do
 data Command = Offer Integer | Retrieve | Use | Funds
     deriving (Show, Read, Eq, Ord)
 
-getFunds :: UUID -> IO ()
+getFunds :: UUID -> IO () -- for this we want information out of a web interface
 getFunds uuid = handle h $ runReq defaultHttpConfig $ do
     v <- req
-        POST
+        POST   -- the first request of the funds endpoint calls ownfunds and then tells it
         (http "127.0.0.1" /: "api"  /: "new" /: "contract" /: "instance" /: pack (show uuid) /: "endpoint" /: "funds")
         (ReqBodyJson ())
         (Proxy :: Proxy (JsonResponse ()))
@@ -63,13 +63,13 @@ getFunds uuid = handle h $ runReq defaultHttpConfig $ do
         then liftIO $ putStrLn "error getting funds"
         else do
             w <- req
-                GET
+                GET  -- the second request use the status endpoint to get the status of the instance
                 (http "127.0.0.1" /: "api"  /: "new" /: "contract" /: "instance" /: pack (show uuid) /: "status")
                 NoReqBody
                 (Proxy :: Proxy (JsonResponse (ContractInstanceClientState OracleContracts)))
                 (port 8080)
-            liftIO $ putStrLn $ case fromJSON $ observableState $ cicCurrentState $ responseBody w of
-                Success (Last (Just f)) -> "funds: " ++ show (flattenValue f)
+            liftIO $ putStrLn $ case fromJSON $ observableState $ cicCurrentState $ responseBody w of   -- extract the observableState
+                Success (Last (Just f)) -> "funds: " ++ show (flattenValue f)  -- get the value that the contract told in the first request
                 _                       -> "error decoding state"
   where
     h :: HttpException -> IO ()
