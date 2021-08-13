@@ -25,7 +25,7 @@ instance Pretty OracleContracts where
 --           -> the CurrencySymbol parameter is used to communicate the currency symbol of the USDT token
 -- *** The Swap is parameterized by the oracle and will be used to run the swap contract; it offers various endpoints
 
---       >>>>> The OracleContracts defiinition will be used from the PAB and in the front-end
+--       >>>>> The OracleContracts definition will be used from the PAB and in the front-end
 
 -- PAB allows turning everything done for the oracle and turn it into an executable application that runs the constracts
--- This runs on a simulated blockchain, but if testnet or mainnet was running, it could be deployed there once available
+-- It runs on a simulated blockchain, but if testnet or mainnet was running, it could be deployed there once available
