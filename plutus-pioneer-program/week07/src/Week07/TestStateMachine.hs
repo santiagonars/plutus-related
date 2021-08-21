@@ -11,7 +11,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
-
+-- This test module is almsot an exact copy of Test.hs used for game in EvenOdd.hs
 module Week07.TestStateMachine where
 
 import           Control.Monad              hiding (fmap)
@@ -45,10 +45,10 @@ myTrace c1 c2 = do
 
     let pkh1      = pubKeyHash $ walletPubKey $ Wallet 1
         pkh2      = pubKeyHash $ walletPubKey $ Wallet 2
-        stake     = 5_000_000
-        deadline1 = slotToEndPOSIXTime def 5
-        deadline2 = slotToEndPOSIXTime def 10
-
+        stake     = 5_000_000                  
+        deadline1 = slotToEndPOSIXTime def 5  -- slotToEndPOSIXTime uses POSIXTime at the end of a slot (]instead of "ToBegin" like in a previous lecture test example)
+        deadline2 = slotToEndPOSIXTime def 10 -- REASON: For state machine mechanism, it is need to use the slot a the end of POSIXTime to guarantee
+                                              --         selecting a valid slot when converting from off-chain code to on-change code (will be fixed later on)
         fp = FirstParams
                 { fpSecond         = pkh2
                 , fpStake          = stake
