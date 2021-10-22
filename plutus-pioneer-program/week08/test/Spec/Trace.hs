@@ -36,7 +36,7 @@ import           Week08.TokenSale
 
 tests :: TestTree
 tests = checkPredicateOptions
-    (defaultCheckOptions & emulatorConfig .~ emCfg)  -- modify emulatorConfig to have the value from emCfg
+    (defaultCheckOptions & emulatorConfig .~ emCfg)  -- these are the default checkOptions; modify emulatorConfig to have the value from emCfg
     "token sale trace"  -- this argument is the name of the test    ** Next chain together 3 trace predicates; walletFundsChange checks that the wallet funds have changed (ignores fees)
     (     walletFundsChange (Wallet 1) (Ada.lovelaceValueOf   10_000_000  <> assetClassValue token (-60)) -- means wallet 1 should have 10 ada more and 60 tokens less
      .&&. walletFundsChange (Wallet 2) (Ada.lovelaceValueOf (-20_000_000) <> assetClassValue token   20)  -- means wallet 2 should have 20 ada less and 20 tokens more
