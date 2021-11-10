@@ -1,5 +1,7 @@
 module Week08.QuickCheck where
 
+import Test.QuickCheck -- added to use library
+
 prop_simple :: Bool
 prop_simple = 2 + 2 == (4 :: Int)
 
@@ -28,10 +30,10 @@ insert x (y:ys)  | x <= y       =  x : y : ys
 isSorted :: [Int] -> Bool
 isSorted []           = True
 isSorted [_]          = True
-isSorted (x : y : ys) = x <= y && isSorted (y : ys)
+isSorted (x : y : ys) = x <= y && isSorted (y : ys) 
 
 prop_sort_sorts :: [Int] -> Bool
-prop_sort_sorts xs = isSorted $ sort xs
+prop_sort_sorts xs = isSorted $ sort xs -- for a list of integers, apply sort to it and then check if it's sorted
 
-prop_sort_preserves_length :: [Int] -> Bool
-prop_sort_preserves_length xs = length (sort xs) == length xs
+prop_sort_preserves_length :: [Int] -> Bool -- states that after sorting, result should be same length as original list
+prop_sort_preserves_length xs = length (sort xs) == length xs 
