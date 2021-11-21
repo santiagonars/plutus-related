@@ -26,7 +26,7 @@ import           Data.Monoid                (Last (..))
 import           Ledger
 import           Ledger.Value
 import           Ledger.Ada                 as Ada
-import           Plutus.Contract.Test
+import           Plutus.Contract.Test       -- provides basic support for testing Plutus
 import           Plutus.Trace.Emulator      as Emulator
 import           PlutusTx.Prelude
 import           Prelude                    (IO, String, Show (..))

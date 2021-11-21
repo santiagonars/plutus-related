@@ -157,8 +157,8 @@ startEndpoint = forever     -- given some monadic computation, it forever repeat
               $ endpoint @"start" $ \(cs, tn, useTT) -> startTS (AssetClass (cs, tn)) useTT -- endpoint has changed from the lecture before; now has an argument for continuation
                                                                                             -- continuation function defines what to do with provided parameter values
                                                                                             -- overall result of endpoint operation is of type Promise w s e b
-                                                                                            -- Promise is a wrapper indicating that this contract starts weitha  waiting action (use with `select`)
-                                                                                            -- Promise it is a contract that first waits for external input
+                                                                                            -- Promise is a wrapper indicating that this contract starts with a waiting action (use with `select`)
+                                                                                            -- Promise is a contract that first waits for external input
 useEndpoints :: TokenSale -> Contract () TSUseSchema Text ()
 useEndpoints ts = forever
                 $ handleError logError
