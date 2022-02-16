@@ -34,6 +34,12 @@ reverse' (x:xs) = reverse' xs ++ [x]
 repeat' :: a -> [a]  
 repeat' x = x:repeat' x 
 
+-- Zip two lists together
+zip' :: [a] -> [b] -> [(a,b)]  
+zip' _ [] = []  
+zip' [] _ = []  
+zip' (x:xs) (y:ys) = (x,y):zip' xs ys
+
 -- Custom elem function
 elem' :: (Eq a) => a -> [a] -> Bool  
 elem' a [] = False  
