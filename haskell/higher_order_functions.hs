@@ -32,3 +32,6 @@ zipWith' _ [] _ = []
 zipWith' _ _ [] = []  
 zipWith' f (x:xs) (y:ys) = f x y : zipWith' f xs ys
 
+-- takes a function and returns a function where the first two arguments are flipped
+flip' :: (a -> b -> c) -> b -> a -> c
+flip' f y x = f x y
